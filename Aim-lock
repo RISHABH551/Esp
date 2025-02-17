@@ -1,0 +1,51 @@
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+local Camera = game.Workspace.CurrentCamera
+local LocalPlayer = Players.LocalPlayer
+local Target = nil
+local AimLockEnabled = false
+
+-- Function to find the closest player's head
+local function getClosestPlayer()
+    local closestPlayer = nil
+    local shortestDistance = math.huge
+    
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Head") then
+            local headPosition = player.Character.Head.Position
+            local screenPoint, onScreen = Camera:WorldToViewportPoint(headPosition)
+            
+            if onScreen then
+                local mouseLocation = UserInputService:GetMouseLocation()
+                local distance = (Vector2.new(screenPoint.X, screenPoint.Y) - mouseLocation).Magnitude
+                
+                if distance < shortestDistance then
+                    shortestDistance = distance
+                    closestPlayer = player.Character.Head
+                end
+            end
+        end
+    end
+    
+    return closestPlayer
+end
+
+-- Toggle aim lock
+UserInputService.InputBegan:Connect(function(input)
+    if input.KeyCode == Enum.KeyCode.E then -- Press 'E' to toggle aim lock
+        AimLockEnabled = not AimLockEnabled
+        if AimLockEnabled then
+            Target = getClosestPlayer()
+        else
+            Target = nil
+        end
+    end
+end)
+
+-- Lock aim to target
+RunService.RenderStepped:Connect(function()
+    if AimLockEnabled and Target then
+        Camera.CFrame = CFrame.new(Camera.CFrame.Position, Target.Position)
+    end
+end)
