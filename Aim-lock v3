@@ -1,0 +1,75 @@
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+local Camera = game.Workspace.CurrentCamera
+local LocalPlayer = Players.LocalPlayer
+local AimLockEnabled = false
+local Target = nil
+
+-- Create UI Button
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+local AimButton = Instance.new("TextButton")
+AimButton.Parent = ScreenGui
+AimButton.Size = UDim2.new(0, 150, 0, 50)
+AimButton.Position = UDim2.new(0.85, 0, 0.1, 0) -- Top-right corner
+AimButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+AimButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+AimButton.Text = "Aim Lock: OFF"
+AimButton.TextScaled = true
+
+-- Function to find the closest player's head
+local function getClosestPlayer()
+    local closestPlayer = nil
+    local shortestDistance = math.huge
+
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Head") then
+            local head = player.Character.Head
+            local screenPoint, onScreen = Camera:WorldToViewportPoint(head.Position)
+
+            if onScreen then
+                local mouseLocation = UserInputService:GetMouseLocation()
+                local distance = (Vector2.new(screenPoint.X, screenPoint.Y) - mouseLocation).Magnitude
+
+                if distance < shortestDistance then
+                    shortestDistance = distance
+                    closestPlayer = head
+                end
+            end
+        end
+    end
+
+    return closestPlayer
+end
+
+-- Function to toggle aim lock
+local function toggleAimLock()
+    AimLockEnabled = not AimLockEnabled
+
+    if AimLockEnabled then
+        Target = getClosestPlayer()
+        AimButton.Text = "Aim Lock: ON"
+        AimButton.BackgroundColor3 = Color3.fromRGB(0, 200, 0) -- Green when ON
+    else
+        Target = nil
+        AimButton.Text = "Aim Lock: OFF"
+        AimButton.BackgroundColor3 = Color3.fromRGB(200, 0, 0) -- Red when OFF
+    end
+end
+
+-- Button Click Event
+AimButton.MouseButton1Click:Connect(toggleAimLock)
+
+-- Smoothly rotate camera toward target
+RunService.RenderStepped:Connect(function()
+    if AimLockEnabled and Target then
+        local camPos = Camera.CFrame.Position
+        local targetPos = Target.Position
+        local newCFrame = CFrame.new(camPos, targetPos) -- Point camera at target
+        
+        -- Smooth transition using Lerp (linear interpolation)
+        Camera.CFrame = Camera.CFrame:Lerp(newCFrame, 0.2) -- Adjust 0.2 for faster/slower smoothing
+    end
+end)
